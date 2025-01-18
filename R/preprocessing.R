@@ -65,7 +65,7 @@ transform_data <- function(data_list) {
   match_results <- data_list$match_results
   innings_results <- data_list$innings_results
 
-  df <- join_inning_data(match_results = match_results, innings_results = innings_results) |>
+  df <- join_innings_data(match_results = match_results, innings_results = innings_results) |>
     aggregate_innings_data()
 
   df
@@ -80,17 +80,15 @@ split_data <- function(df) {
   val_idx <- sample(remaining_idx, size = 0.2 * n)  # 20% for validation
   test_idx <- setdiff(remaining_idx, val_idx)  # Remaining 20% for testing
 
-  df_transformed[, -which(colnames(df_transformed) == 'team')]
+  df <- df[, -which(colnames(df) == 'team')]
 
-  # Split the data
   train_data <- df[train_idx, ]
   val_data <- df[val_idx, ]
   test_data <- df[test_idx, ]
 
-  # Check sizes
-  message("Training data: ", nrow(train_data))  # 60 rows
-  message("Validation data: ", nrow(val_data))    # 20 rows
-  message("Testing data: ", nrow(test_data))   # 20 rows
+  message("Training data: ", nrow(train_data))
+  message("Validation data: ", nrow(val_data))
+  message("Testing data: ", nrow(test_data))
 
   return(
     list(
@@ -102,38 +100,43 @@ split_data <- function(df) {
 }
 
 poisson_model <- function(df) {
-  glm(runs ~ ., data = df, family = poisson)
+
+  mod <- stats::glm(runs ~ ., data = df, family = stats::poisson())
+
+  df$preds <- stats::predict(mod, newdata = df, type = 'response')
+
+  mse <- mean((df$runs - df$preds)**2)
+
+  tibble::tibble(
+    mse = mse,
+    model_object = list(mod),
+    preds = list(df)
+  )
 }
 
-model_data <- function(data_splits) {
+train_model <- function(data_splits, evaluate_test = FALSE) {
   checkmate::assert_list(data_splits)
 
-  train_data <- data_splits$train_data
-  val_data <- data_splits$val_data
-  test_data <- data_splits$test_data
+  if(evaluate_test) {
+    data_splits$train_data <- dplyr::bind_rows( data_splits$train_data, data_splits$val_data)
+    data_splits <- data_splits[which(names(data_splits) != 'val_data')]
+  } else {
+    data_splits <- data_splits[which(names(data_splits) != 'test_data')]
+  }
 
   purrr::map(.x = data_splits, .f = poisson_model)
-
-  # TODO: wrap into a dataframe or list that contains eval metric and data
+  #TODO: write or log metrics somewhere?
 }
 
+training_pipeline <- function(datasets2) {
 
+  set.seed(527)
+  df_transformed <- transform_data(datasets2)
+  data_splits <- split_data(df_transformed)
+  data_splits |> train_model()
+  #data_splits |> train_model(evaluate_test = TRUE)
 
-df_transformed <- transform_data(datasets2)
-data_splits <- split_data(df_transformed)
-
-
-df_transformed
-
-mod <- glm(runs ~ ., data = df_transformed[, -which(colnames(df_transformed) == 'team')], family = poisson)
-
-df_transformed |>
-  dplyr::mutate(
-    pred = predict(mod, newdata = df_transformed, type = 'response')
-  ) |>
-  dplyr::pull(pred) |> summary()
-
-df_transformed
+}
 
 
 
