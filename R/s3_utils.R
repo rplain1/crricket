@@ -1,10 +1,4 @@
-initialize_temp_duckdb <- function() {
-  return(con)
-}
 
-
-
-# Function to perform ETL task
 elt_to_temp_dir <- function(file_name) {
 
   con <- DBI::dbConnect(duckdb::duckdb())
@@ -21,12 +15,12 @@ elt_to_temp_dir <- function(file_name) {
   query <- glue::glue('
     COPY (
       SELECT *
-      FROM read_json(\'https://cricketwireless.s3.us-east-2.amazonaws.com/raw-data/{file_name}.json\')
+      FROM read_json(\'https://cricketwireless.s3.us-east-2.amazonaws.com/raw-data/{file_name}.json\',maximum_depth = -1, sample_size = -1)
+
     )
-    TO \'{tmp_file}\' (FORMAT CSV);
+    TO \'{tmp_file}\' (FORMAT PARQUET);
   ')
 
-  # Execute the query
   DBI::dbExecute(con, query)
   message("File ", file_name, " written to: ", tmp_file)
   DBI::dbDisconnect(con)
@@ -35,13 +29,12 @@ elt_to_temp_dir <- function(file_name) {
 }
 
 
-main <- function() {
-  # Run the function
+extract_data <- function() {
   matches_path <- elt_to_temp_dir('match_results')
-  matches <- readr::read_csv(matches_path)
+  matches <- arrow::read_parquet(matches_path)
 
   innings_path <- elt_to_temp_dir('innings_results')
-  innings <- readr::read_csv(innings_path)
+  innings <- arrow::read_parquet(innings_path)
   unlink(matches_path, recursive = TRUE)
 
   return(
