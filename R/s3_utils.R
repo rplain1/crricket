@@ -1,5 +1,4 @@
 initialize_temp_duckdb <- function() {
-  con <- DBI::dbConnect(duckdb::duckdb())
   return(con)
 }
 
@@ -8,8 +7,8 @@ initialize_temp_duckdb <- function() {
 # Function to perform ETL task
 elt_to_temp_dir <- function(file_name) {
 
-  # Initialize a DuckDB connection
-  con <- initialize_temp_duckdb()
+  con <- DBI::dbConnect(duckdb::duckdb())
+
   DBI::dbExecute(con, "INSTALL json;")
   DBI::dbExecute(con, "LOAD json;")
   DBI::dbExecute(con, "INSTALL httpfs;")
