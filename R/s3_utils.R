@@ -40,8 +40,17 @@ main <- function() {
   # Run the function
   matches_path <- elt_to_temp_dir('match_results')
   matches <- readr::read_csv(matches_path)
+
+  innings_path <- elt_to_temp_dir('innings_results')
+  innings <- readr::read_csv(innings_path)
   unlink(matches_path, recursive = TRUE)
 
+  return(
+    list(
+      match_results = matches,
+      innings_results = innings
+    )
+  )
 }
 
 
