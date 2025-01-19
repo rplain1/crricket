@@ -17,6 +17,8 @@ Imports:
     dplyr (>= 1.0),
     duckdb (>= 1.0),
     glue (>= 1.7),
-    readr (>= 2.0),
-    stringr (>= 1.5.1),
-    tibble (>= 3.0)
+    rlang (>= 1.1.4),
+    stringr (>= 1.5.1)
+Depends: 
+    R (>= 2.10)
+RoxygenNote: 7.3.2
